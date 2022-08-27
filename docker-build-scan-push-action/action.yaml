@@ -61,7 +61,7 @@ runs:
         username: ${{ inputs.registry_username }}
         password: ${{ inputs.registry_password }}
 
-    - name: Build a Docker image from the Dockerfile
+    - name: Build Docker image from the Dockerfile
       shell: bash
       run: |
         MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
@@ -81,7 +81,21 @@ runs:
         exit-code: '1'
         ignore-unfixed: true
         vuln-type: 'os,library'
-        severity: 'CRITICAL,HIGH'
+        #severity: 'CRITICAL,HIGH'
+
+    - name: Push Docker image to registry
+      shell: bash
+      run: |
+        MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
+        docker push ${{ inputs.image_name }}:${MAIN_DOCKER_TAG}
+
+        ALL_DOCKER_TAGS=${{ steps.prep.outputs.docker_tags }}
+        IFS=', ' read -r -a array <<< "$ALL_DOCKER_TAGS"
+        for TAG in "${array[@]}"
+        do
+            docker tag ${{ inputs.image_name }}:${MAIN_DOCKER_TAG} ${{ inputs.image_name }}:${TAG}
+            docker push ${{ inputs.image_name }}:${TAG}
+        done
 
         
     # - name: Build and Push the Docker Image
