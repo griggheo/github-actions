@@ -62,6 +62,8 @@ runs:
         password: ${{ inputs.registry_password }}
 
     - name: Build a Docker image from the Dockerfile
+      id: docker_build
+      shell: bash
       run: |
         MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
         DOCKER_BUILD_ARGS="-t ${{ inputs.image_name }}:$MAIN_DOCKER_TAG ${{ inputs.context }} -f ${{ inputs.dockerfile_path }}"
@@ -72,9 +74,10 @@ runs:
         done
         docker build $DOCKER_BUILD_ARGS
 
-
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
+      id: docker_scan
+      needs: docker_build
       with:
         image-ref: "${{ inputs.image_name }}:${{ steps.prep.outputs.main_docker_tag }}"
         format: 'table'
