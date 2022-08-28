@@ -47,8 +47,8 @@ on:
       registry_password:
         description: "Password for target registry"
         required: true
-      github_token:
-        description: "GitHub token for cloning repos and pushing to GitHub Packages"
+      gh_pat:
+        description: "GitHub PAT for cloning repos and pushing to GitHub Packages"
         required: true
 
 jobs:
@@ -73,7 +73,7 @@ jobs:
         arguments: publish
       env:
         USERNAME: ${{ github.actor }}
-        TOKEN: ${{ secrets.github_token }}
+        TOKEN: ${{ secrets.gh_pat }}
 
 
   # build-scan-push-docker-image:
