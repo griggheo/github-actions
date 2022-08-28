@@ -12,12 +12,6 @@ on:
         description: "Name of target registry"
         required: false
         default: registry.hub.docker.com
-      registry_org:
-        description: "Organization for target registry"
-        required: true
-      registry_username:
-        description: "Username for target registry"
-        required: true
       image_name:
         description: "Name of the Docker image to push"
         required: true
@@ -40,6 +34,9 @@ on:
         description: "Build-time args for Docker image build (comma-separated)"
         required: false
       secrets:
+        registry_username:
+          description: "Username for target registry"
+          required: true
         registry_password:
           description: "Password for target registry"
           required: true
