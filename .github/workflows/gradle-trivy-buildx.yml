@@ -5,50 +5,63 @@ on:
     inputs:
       java_version:
         description: "java version for the gradle build"
-        required: false 
+        type: string
+        required: false
         default : '11'
       java_distro:
         description: "java distribution for the gradle build"
+        type: string
         required: false 
         default: 'temurin'
       build_script_path:
         description: "Path to script which builds the app"
+        type: string
         required: false 
         default: "./.github/scripts/build-app.sh"
       registry: 
         description: "Name of target registry"
+        type: string
         required: false
         default: registry.hub.docker.com
       image_name:
         description: "Name of the Docker image to push"
+        type: string
         required: true
       image_tag_prefix: 
         description: "Prefix for Docker image tag (e.g. amazoncoretto)"
+        type: string
         required: false
         default: ''
       extra_tags: 
         description: "Extra tags for Docker image (comma-separated)"
+        type: string
         required: false 
       context:
         description: "Root directory for building the Docker image"
+        type: string
         required: false 
         default: '.'
       dockerfile_path:
         description: "Path to Dockerfile"
+        type: string
         required: false 
         default: 'Dockerfile'
       build_args: 
         description: "Build-time args for Docker image build (comma-separated)"
+        type: string
         required: false
     secrets:
       registry_username:
         description: "Username for target registry"
+        type: string
         required: true
       registry_password:
         description: "Password for target registry"
+        type: string
         required: true
       gh_pat:
         description: "GitHub PAT for cloning repos and pushing to GitHub Packages"
+        type: string
         required: true
 
 jobs:
