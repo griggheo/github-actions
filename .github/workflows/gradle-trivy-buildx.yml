@@ -66,11 +66,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Set up JDK
+    - name: Set up java
       uses: actions/setup-java@v3
       with:
         java-version: ${{ inputs.java_version }}
         distribution: ${{ inputs.java_distro }}
+        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
+        settings-path: ${{ github.workspace }} # location for the settings.xml file
     - name: Build with Gradle
       uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
       with:
