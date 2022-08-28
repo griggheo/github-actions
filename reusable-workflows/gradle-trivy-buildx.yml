@@ -2,7 +2,6 @@ name: "Build and publish Gradle app, scan and publish a Docker image to a Docker
 
 on:
   workflow_call:
-
     inputs:
       java_version:
         description: "java version for the gradle build"
@@ -41,16 +40,16 @@ on:
       build_args: 
         description: "Build-time args for Docker image build (comma-separated)"
         required: false
-      secrets:
-        registry_username:
-          description: "Username for target registry"
-          required: true
-        registry_password:
-          description: "Password for target registry"
-          required: true
-        github_token:
-          description: "GitHub token for cloning repos and pushing to GitHub Packages"
-          required: true
+    secrets:
+      registry_username:
+        description: "Username for target registry"
+        required: true
+      registry_password:
+        description: "Password for target registry"
+        required: true
+      github_token:
+        description: "GitHub token for cloning repos and pushing to GitHub Packages"
+        required: true
 
 jobs:
   gradle-build-publish:
