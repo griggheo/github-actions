@@ -53,15 +53,12 @@ on:
     secrets:
       registry_username:
         description: "Username for target registry"
-        type: string
         required: true
       registry_password:
         description: "Password for target registry"
-        type: string
         required: true
       gh_pat:
         description: "GitHub PAT for cloning repos and pushing to GitHub Packages"
-        type: string
         required: true
 
 jobs:
