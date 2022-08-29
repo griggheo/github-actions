@@ -3,10 +3,6 @@ name: "Build and publish Gradle app, scan and publish a Docker image to a Docker
 on:
   workflow_call:
     inputs:
-      github_org_name:
-        description: "Name of the Docker image to push"
-        type: string
-        required: true
       java_version:
         description: "java version for the gradle build"
         type: string
