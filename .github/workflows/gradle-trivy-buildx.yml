@@ -148,26 +148,26 @@ jobs:
           done
           docker build $DOCKER_BUILD_ARGS
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: "${{ inputs.image_name }}:${{ steps.prep.outputs.main_docker_tag }}"
-        format: 'table'
-        exit-code: '0'
-        ignore-unfixed: true
-        vuln-type: 'os,library'
-        #severity: 'CRITICAL,HIGH'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ inputs.image_name }}:${{ steps.prep.outputs.main_docker_tag }}"
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          #severity: 'CRITICAL,HIGH'
 
-    - name: Push Docker image to registry
-      shell: bash
-      run: |
-        MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
-        docker push ${{ inputs.image_name }}:${MAIN_DOCKER_TAG}
+      - name: Push Docker image to registry
+        shell: bash
+        run: |
+          MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
+          docker push ${{ inputs.image_name }}:${MAIN_DOCKER_TAG}
 
-        ALL_DOCKER_TAGS=${{ steps.prep.outputs.docker_tags }}
-        IFS=', ' read -r -a array <<< "$ALL_DOCKER_TAGS"
-        for TAG in "${array[@]}"
-        do
-            docker tag ${{ inputs.image_name }}:${MAIN_DOCKER_TAG} ${{ inputs.image_name }}:${TAG}
-            docker push ${{ inputs.image_name }}:${TAG}
-        done
+          ALL_DOCKER_TAGS=${{ steps.prep.outputs.docker_tags }}
+          IFS=', ' read -r -a array <<< "$ALL_DOCKER_TAGS"
+          for TAG in "${array[@]}"
+          do
+              docker tag ${{ inputs.image_name }}:${MAIN_DOCKER_TAG} ${{ inputs.image_name }}:${TAG}
+              docker push ${{ inputs.image_name }}:${TAG}
+          done
