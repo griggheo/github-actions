@@ -143,6 +143,7 @@ jobs:
           ./.github/scripts/download-jar.sh $USERNAME $PAT $APP_VERSION
           mkdir -p build/libs
           mv *jar build/libs
+          ls -la build/libs
 
       - name: Build Docker image from the Dockerfile
         shell: bash
@@ -164,7 +165,7 @@ jobs:
           exit-code: '0'
           ignore-unfixed: true
           vuln-type: 'os,library'
-          #severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL,HIGH'
 
       - name: Push Docker image to registry
         shell: bash
@@ -176,6 +177,6 @@ jobs:
           IFS=', ' read -r -a array <<< "$ALL_DOCKER_TAGS"
           for TAG in "${array[@]}"
           do
-              docker tag ${{ inputs.image_name }}:${MAIN_DOCKER_TAG} ${{ inputs.image_name }}:${TAG}
-              docker push ${{ inputs.image_name }}:${TAG}
+              docker tag ${{ inputs.image_name }}:${MAIN_DOCKER_TAG} ${TAG}
+              docker push ${TAG}
           done
