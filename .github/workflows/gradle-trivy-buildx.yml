@@ -141,6 +141,8 @@ jobs:
           PAT=${{ secrets.gh_pat }}
           APP_VERSION=${{ needs.gradle-build-publish.outputs.app_version }}
           ./.github/scripts/download-jar.sh $USERNAME $PAT $APP_VERSION
+          mkdir -p build/libs
+          mv *jar build/libs
 
       - name: Build Docker image from the Dockerfile
         shell: bash
