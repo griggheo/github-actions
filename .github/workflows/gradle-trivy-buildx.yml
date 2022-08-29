@@ -3,6 +3,10 @@ name: "Build and publish Gradle app, scan and publish a Docker image to a Docker
 on:
   workflow_call:
     inputs:
+      github_org_name:
+        description: "Name of the Docker image to push"
+        type: string
+        required: true
       java_version:
         description: "java version for the gradle build"
         type: string
@@ -57,8 +61,11 @@ on:
       registry_password:
         description: "Password for target registry"
         required: true
+      gh_packages_username:
+        description: "Username for GitHub Packages"
+        required: true
       gh_pat:
-        description: "GitHub PAT for cloning repos and pushing to GitHub Packages"
+        description: "GitHub PAT for cloning repos and interacting with GitHub Packages"
         required: true
 
 jobs:
@@ -88,67 +95,79 @@ jobs:
         TOKEN: ${{ secrets.gh_pat }}
 
 
-  # build-scan-push-docker-image:
-  #   runs-on: ubuntu-latest
-  #   needs: gradle-build-publish
-  #   steps:
-  #     - name: Prepare
-  #       id: prep
-  #       shell: bash
-  #       run: |
-  #         GIT_COMMIT=$(git rev-parse --short HEAD)
-  #         MAIN_DOCKER_TAG="$GIT_COMMIT"
-  #         if [ ${{inputs.image_tag_prefix}} ]; then
-  #           MAIN_DOCKER_TAG="${{inputs.image_tag_prefix}}-${MAIN_DOCKER_TAG}"
-  #         fi
-  #         DOCKER_TAGS="${{ inputs.image_name }}:$MAIN_DOCKER_TAG"
-  #         for EXTRA_TAG in $(echo ${{ inputs.extra_tags }} | tr ',' ' '); do
-  #           DOCKER_TAGS="$DOCKER_TAGS,${{ inputs.image_name }}:$EXTRA_TAG"
-  #         done
-  #         echo ::set-output name=git_commit::${GIT_COMMIT}
-  #         echo ::set-output name=main_docker_tag::${MAIN_DOCKER_TAG}
-  #         echo ::set-output name=docker_tags::${DOCKER_TAGS}
-  #     - name: Setup BuildX
-  #       uses: docker/setup-buildx-action@v1
+  build-scan-push-docker-image:
+    runs-on: ubuntu-latest
+    needs: gradle-build-publish
+    steps:
+      - name: Prepare
+        id: prep
+        shell: bash
+        run: |
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+          MAIN_DOCKER_TAG="$GIT_COMMIT"
+          if [ ${{inputs.image_tag_prefix}} ]; then
+            MAIN_DOCKER_TAG="${{inputs.image_tag_prefix}}-${MAIN_DOCKER_TAG}"
+          fi
+          DOCKER_TAGS="${{ inputs.image_name }}:$MAIN_DOCKER_TAG"
+          for EXTRA_TAG in $(echo ${{ inputs.extra_tags }} | tr ',' ' '); do
+            DOCKER_TAGS="$DOCKER_TAGS,${{ inputs.image_name }}:$EXTRA_TAG"
+          done
+          APP_VERSION=$(cat gradle.properties| cut -f 2 -d '=')
 
-  #     - name: Login to the Registry
-  #       uses: docker/login-action@v1
-  #       with:
-  #         username: ${{ inputs.registry_username }}
-  #         password: ${{ inputs.registry_password }}
+          echo ::set-output name=git_commit::${GIT_COMMIT}
+          echo ::set-output name=main_docker_tag::${MAIN_DOCKER_TAG}
+          echo ::set-output name=docker_tags::${DOCKER_TAGS}
+          echo ::set-output name=app_version::${APP_VERSION}
+          
+      - name: Setup BuildX
+        uses: docker/setup-buildx-action@v1
 
-  #     - name: Build Docker image from the Dockerfile
-  #       shell: bash
-  #       run: |
-  #         MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
-  #         DOCKER_BUILD_ARGS="-t ${{ inputs.image_name }}:$MAIN_DOCKER_TAG ${{ inputs.context }} -f ${{ inputs.dockerfile_path }}"
-  #         IFS=', ' read -r -a array <<< "${{ inputs.build_args }}"
-  #         for BUILD_ARG in "${array[@]}"
-  #         do
-  #             DOCKER_BUILD_ARGS="$DOCKER_BUILD_ARGS --build-arg $BUILD_ARG"
-  #         done
-  #         docker build $DOCKER_BUILD_ARGS
+      - name: Login to the Registry
+        uses: docker/login-action@v1
+        with:
+          username: ${{ inputs.registry_username }}
+          password: ${{ inputs.registry_password }}
 
-  #   - name: Run Trivy vulnerability scanner
-  #     uses: aquasecurity/trivy-action@master
-  #     with:
-  #       image-ref: "${{ inputs.image_name }}:${{ steps.prep.outputs.main_docker_tag }}"
-  #       format: 'table'
-  #       exit-code: '0'
-  #       ignore-unfixed: true
-  #       vuln-type: 'os,library'
-  #       #severity: 'CRITICAL,HIGH'
+      - name: Download jar from GitHub packages
+        shell: bash
+        run: |
+          USERNAME=${{ secrets.gh_packages_username }}
+          PAT=${{ secrets.gh_pat }}
+          APP_VERSION=${{ steps.prep.outputs.app_version }}
+          ./.github/scripts/download-jar.sh $USERNAME $PAT $APP_VERSION
 
-  #   - name: Push Docker image to registry
-  #     shell: bash
-  #     run: |
-  #       MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
-  #       docker push ${{ inputs.image_name }}:${MAIN_DOCKER_TAG}
+      - name: Build Docker image from the Dockerfile
+        shell: bash
+        run: |
+          MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
+          DOCKER_BUILD_ARGS="-t ${{ inputs.image_name }}:$MAIN_DOCKER_TAG ${{ inputs.context }} -f ${{ inputs.dockerfile_path }}"
+          IFS=', ' read -r -a array <<< "${{ inputs.build_args }}"
+          for BUILD_ARG in "${array[@]}"
+          do
+              DOCKER_BUILD_ARGS="$DOCKER_BUILD_ARGS --build-arg $BUILD_ARG"
+          done
+          docker build $DOCKER_BUILD_ARGS
 
-  #       ALL_DOCKER_TAGS=${{ steps.prep.outputs.docker_tags }}
-  #       IFS=', ' read -r -a array <<< "$ALL_DOCKER_TAGS"
-  #       for TAG in "${array[@]}"
-  #       do
-  #           docker tag ${{ inputs.image_name }}:${MAIN_DOCKER_TAG} ${{ inputs.image_name }}:${TAG}
-  #           docker push ${{ inputs.image_name }}:${TAG}
-  #       done
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: "${{ inputs.image_name }}:${{ steps.prep.outputs.main_docker_tag }}"
+        format: 'table'
+        exit-code: '0'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        #severity: 'CRITICAL,HIGH'
+
+    - name: Push Docker image to registry
+      shell: bash
+      run: |
+        MAIN_DOCKER_TAG=${{ steps.prep.outputs.main_docker_tag }}
+        docker push ${{ inputs.image_name }}:${MAIN_DOCKER_TAG}
+
+        ALL_DOCKER_TAGS=${{ steps.prep.outputs.docker_tags }}
+        IFS=', ' read -r -a array <<< "$ALL_DOCKER_TAGS"
+        for TAG in "${array[@]}"
+        do
+            docker tag ${{ inputs.image_name }}:${MAIN_DOCKER_TAG} ${{ inputs.image_name }}:${TAG}
+            docker push ${{ inputs.image_name }}:${TAG}
+        done
