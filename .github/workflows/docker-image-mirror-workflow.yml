@@ -65,7 +65,7 @@ jobs:
         env:
           COSIGN_PRIVATE_KEY: ${{secrets.COSIGN_PRIVATE_KEY}}
           COSIGN_PUBLIC_KEY: ${{secrets.COSIGN_PUBLIC_KEY}}
-          COSIGN_PASSWORD: ${{secrets.CCOSIGN_PRIVATE_KEY_PASSWORD}}
+          COSIGN_PASSWORD: ${{secrets.COSIGN_PRIVATE_KEY_PASSWORD}}
         run: |
           DESTINATION_REPOSITORY="${{ inputs.destination-registry }}/${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}"
           UPSTREAM_DOCKER_IMAGE="${{ inputs.upstream-registry }}/${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}"
