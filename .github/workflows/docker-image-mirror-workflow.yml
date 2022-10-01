@@ -14,6 +14,10 @@ on:
       upstream-image-list: 
         required: true
         type: string
+      sign-image:
+        required: false
+        type: string
+        default: "true"
     secrets:
       DESTINATION_REGISTRY_USERNAME:
         required: true
@@ -44,8 +48,18 @@ jobs:
         shell: bash
         run: |
           docker login --username ${{ secrets.DESTINATION_REGISTRY_USERNAME }} --password ${{ secrets.DESTINATION_REGISTRY_PASSWORD }} ${{ inputs.destination-registry }}
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@main
+        with:
+          cosign-release: 'v1.12.1'
+      - name: Check cosign install
+        run: cosign version
       - name: Pull Docker image from upstream and push to destination registry 
         shell: bash
+        env:
+          COSIGN_PRIVATE_KEY: ${{secrets.COSIGN_PRIVATE_KEY}}
+          COSIGN_PUBLIC_KEY: ${{secrets.COSIGN_PUBLIC_KEY}}
+          COSIGN_PASSWORD: ${{secrets.CCOSIGN_PRIVATE_KEY_PASSWORD}}
         run: |
           DESTINATION_REPOSITORY="${{ inputs.destination-registry }}/${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}"
           UPSTREAM_DOCKER_IMAGE="${{ inputs.upstream-registry }}/${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}"
@@ -54,3 +68,7 @@ jobs:
           docker pull ${UPSTREAM_DOCKER_IMAGE}
           docker tag ${UPSTREAM_DOCKER_IMAGE} ${DESTINATION_REPOSITORY}
           docker push ${DESTINATION_REPOSITORY}
+          if [ "${{ inputs.destination-registry }}" == "true" ]; then
+            cosign sign --key env://COSIGN_PRIVATE_KEY ${DESTINATION_REPOSITORY}
+            cosign verify --key env://COSIGN_PUBLIC_KEY ${DESTINATION_REPOSITORY}
+          fi
