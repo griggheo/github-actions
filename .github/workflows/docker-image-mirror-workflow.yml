@@ -46,6 +46,8 @@ jobs:
         run: |
           DESTINATION_REPOSITORY="${{ inputs.destination-registry }}/${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}"
           UPSTREAM_DOCKER_IMAGE="${{ inputs.upstream-registry }}/${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}"
+          echo DESTINATION_REPOSITORY=$DESTINATION_REPOSITORY
+          echo UPSTREAM_DOCKER_IMAGE=$UPSTREAM_DOCKER_IMAGE
           docker pull ${UPSTREAM_DOCKER_IMAGE}
           docker tag ${UPSTREAM_DOCKER_IMAGE} ${DESTINATION_REPOSITORY}
           docker push ${DESTINATION_REPOSITORY}
