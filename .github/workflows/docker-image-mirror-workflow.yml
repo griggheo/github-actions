@@ -68,7 +68,7 @@ jobs:
           docker pull ${UPSTREAM_DOCKER_IMAGE}
           docker tag ${UPSTREAM_DOCKER_IMAGE} ${DESTINATION_REPOSITORY}
           docker push ${DESTINATION_REPOSITORY}
-          if [ "${{ inputs.destination-registry }}" == "true" ]; then
+          if [ "${{ inputs.sign-image }}" == "true" ]; then
             cosign sign --key env://COSIGN_PRIVATE_KEY ${DESTINATION_REPOSITORY}
             cosign verify --key env://COSIGN_PUBLIC_KEY ${DESTINATION_REPOSITORY}
           fi
