@@ -33,8 +33,11 @@ jobs:
         id: prep
         shell: bash
         run: |
+          echo IMAGE_AND_TAG=$IMAGE_AND_TAG
           IMAGE=$(echo ${IMAGE_AND_TAG} | cut -f 1 -d ':')
           TAG=$(echo ${IMAGE_AND_TAG} | cut -f 2 -d ':')
+          echo IMAGE=$IMAGE
+          echo TAG=$TAG
           echo ::set-output name=image::${IMAGE}
           echo ::set-output name=tag::${TAG}
       - name: Login to destination registry
