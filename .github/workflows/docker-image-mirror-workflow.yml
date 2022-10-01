@@ -1,0 +1,51 @@
+name: docker-image-mirroring
+
+on:
+  workflow_call:
+    inputs:
+      destination-registry:
+        description: 'Destination Docker registry'
+        required: false
+        type: string
+        default: 'ghcr.io/codepraxis-io'
+      upstream-registry: 
+        required: true
+        type: string
+      upstream-image-list: 
+        required: true
+        type: string
+    secrets:
+      DESTINATION_REGISTRY_USERNAME:
+        required: true
+      DESTINATION_REGISTRY_PASSWORD:
+        required: true
+
+jobs:
+  mirror-docker-image:
+    strategy:
+      matrix:
+        upstream-image: ${{ fromJSON(inputs.upstream-image-list) }}
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_AND_TAG: ${{ matrix.upstream-image }}
+    steps:
+      - name: Get image and tag
+        id: prep
+        shell: bash
+        run: |
+          IMAGE=$(echo ${IMAGE_AND_TAG} | cut -f 1 -d ':')
+          TAG=$(echo ${IMAGE_AND_TAG} | cut -f 2 -d ':')
+          echo ::set-output name=image::${IMAGE}
+          echo ::set-output name=tag::${TAG}
+      - name: Login to destination registry
+        shell: bash
+        run: |
+          docker login --username ${{ secrets.DESTINATION_REGISTRY_USERNAME }} --password ${{ secrets.DESTINATION_REGISTRY_PASSWORD }} ${{ inputs.destination-registry }}
+      - name: Pull Docker image from upstream and push to destination registry 
+        shell: bash
+        run: |
+          DESTINATION_REPOSITORY="${{ inputs.destination-registry }}/${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}"
+          UPSTREAM_DOCKER_IMAGE="${{ inputs.upstream-registry }}/${{ steps.prep.outputs.image }}:${{ steps.prep.outputs.tag }}"
+          docker pull ${UPSTREAM_DOCKER_IMAGE}
+          docker tag ${UPSTREAM_DOCKER_IMAGE} ${DESTINATION_REPOSITORY}
+          docker push ${DESTINATION_REPOSITORY}
