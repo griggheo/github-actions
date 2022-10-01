@@ -25,7 +25,7 @@ on:
         required: true
       COSIGN_PRIVATE_KEY:
         required: true
-      CCOSIGN_PRIVATE_KEY_PASSWORD:
+      COSIGN_PRIVATE_KEY_PASSWORD:
         required: true
       COSIGN_PUBLIC_KEY:
         required: true
