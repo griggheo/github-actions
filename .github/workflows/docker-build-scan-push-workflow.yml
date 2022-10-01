@@ -1,0 +1,131 @@
+name: Docker Build Scan Push Workflow
+
+on:
+  workflow_call:
+    inputs:
+      destination_registry:
+        description: 'Destination Docker registry'
+        required: false
+        type: string
+        default: 'ghcr.io/codepraxis-io'
+      docker_context_dir:
+        description: 'Docker context directory'
+        required: false
+        type: string
+        default: '.'
+      dockerfile_name:
+        description: 'Dockerfile name'
+        required: false
+        type: string
+        dedault: 'Dockerfile'
+      docker_image_name:
+        description: 'Docker image name'
+        required: true
+        type: string
+      docker_image_tag:
+        description: 'Docker image tag'
+        required: true
+        type: string
+      docker_build_type:
+        description: 'Type of Docker build'
+        required: false
+        default: 'buildx'
+        type: string
+      dockerfile_scanner:
+        description: 'Tool for scanning Dockerfiles'
+        required: false
+        default: 'trivy'
+        type: string
+      docker_image_scanner:
+        description: 'Tool for scanning Docker image'
+        required: false
+        default: 'trivy'
+        type: string
+      scan_result_dir:
+        description: 'Directory for scan results'
+        required: false
+        default: 'scan_results'
+        type: string
+      stop_on_critical_vulns:
+        description: 'Whether to stop when Docker image scanner find critical vulnerabilities'
+        required: false
+        default: 'false'
+        type: string
+      docker_sbom_generator:
+        description: 'Tool for generating SBOM'
+        required: false
+        type: string
+        default: 'syft'
+    secrets:
+      DESTINATION_REGISTRY_USERNAME:
+        required: true
+      DESTINATION_REGISTRY_PASSWORD:
+        required: true
+      COSIGN_PRIVATE_KEY:
+        required: true
+      COSIGN_PRIVATE_KEY_PASSWORD:
+        required: true
+      COSIGN_PUBLIC_KEY:
+        required: true
+    # outputs:
+    #   docker-tag-commit:
+    #     description: docker tag to be used in later actions
+    #     value: ${{ jobs.docker-build-push.outputs.docker-tag-commit }}
+
+jobs:
+  docker-build-scan-push:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/codepraxis-io/ubuntu22.04:scantools
+    env:
+      DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
+      DOCKER_CONTEXT_DIR: ${{ inputs.docker_context_dir }}
+      DOCKERFILE_NAME: ${{ inputs.dockerfile_name }}
+      DOCKER_IMAGE_NAME: ${{ inputs.docker_image_name }}
+      DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
+      DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
+      DOCKERFILE_SCANNER: ${{ inputs.dockerfile_scanner }}
+      DOCKER_IMAGE_SCANNER: ${{ inputs.docker_image_scanner }}
+      SCAN_RESULT_DIR: ${{ inputs.scan_result_dir }}
+      STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
+      DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
+      DESTINATION_REGISTRY_USERNAME: ${{ secrets.docker-registry-username }}
+      DESTINATION_REGISTRY_PASSWORD: ${{ secrets.docker-registry-password }}
+      COSIGN_PRIVATE_KEY: ${{secrets.COSIGN_PRIVATE_KEY}}
+      COSIGN_PUBLIC_KEY: ${{secrets.COSIGN_PUBLIC_KEY}}
+      COSIGN_PASSWORD: ${{secrets.COSIGN_PRIVATE_KEY_PASSWORD}}
+    steps:
+      # - name: Make repo safe
+      #   run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+      #   shell: bash
+      - name: Login to destination registry
+        shell: bash
+        run: |
+          docker login --username ${{ secrets.DESTINATION_REGISTRY_USERNAME }} --password ${{ secrets.DESTINATION_REGISTRY_PASSWORD }} ${{ inputs.destination-registry }}
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@main
+        with:
+          cosign-release: 'v1.12.1'
+      - name: Check cosign install
+        run: cosign version
+      - name: Verify signature of base Docker image
+        shell: bash
+        run: |
+          FROM_IMAGE=$(grep FROM $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME | sed -r 's/FROM\s+//g')
+          cosign verify --key env://COSIGN_PUBLIC_KEY $FROM_IMAGE
+      - name: Build Docker Image
+        id: build-docker-image
+        shell: bash
+        run: |
+          if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
+              echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with buildx
+              pushd $DOCKER_CONTEXT_DIR
+                  docker buildx build -t $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG . -f $DOCKERFILE_NAME
+              popd
+          fi
+      # - name: Publish Docker Image
+      #   if: ${{ inputs.push-docker-image == true }}
+      #   shell: bash
+      #   run: |
+      #     docker push ${DOCKER_IMAGE,,} --all-tags
+
