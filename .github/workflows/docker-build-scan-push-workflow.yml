@@ -130,8 +130,8 @@ jobs:
           fi
           if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
               echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with kaniko
-              #docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DOCKER_REGISTRY/$GH_ORG/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ 
-              docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DOCKER_REGISTRY/$GH_ORG/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ --tarPath /workspace/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar --no-push
+              #docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ 
+              docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ --tarPath /workspace/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar --no-push
           fi
       - name: Scan Docker Image
         id: scan-docker-image
@@ -166,14 +166,19 @@ jobs:
               echo Running: grype $ARGS
               grype $ARGS
           fi
+      - name: Upload scan results as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{env.SCAN_RESULT_DIR}}
+          path: ${{env.SCAN_RESULT_DIR}}
       - name: Push Docker Image
         shell: bash
         run: |
           if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
-              docker tag $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG $DOCKER_REGISTRY/$GH_ORG/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
-              docker push $DOCKER_REGISTRY/$GH_ORG/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+              docker tag $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+              docker push $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
           fi
           if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
-              echo Running: crane push $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar $DOCKER_REGISTRY/$GH_ORG/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
-              crane push $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar $DOCKER_REGISTRY/$GH_ORG/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+              echo Running: crane push $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+              crane push $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
           fi
