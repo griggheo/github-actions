@@ -17,7 +17,7 @@ on:
         description: 'Dockerfile name'
         required: false
         type: string
-        dedault: 'Dockerfile'
+        default: 'Dockerfile'
       docker_image_name:
         description: 'Docker image name'
         required: true
@@ -98,6 +98,8 @@ jobs:
       # - name: Make repo safe
       #   run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       #   shell: bash
+      - name: Code Checkout
+        uses: actions/checkout@v2
       - name: Login to destination registry
         shell: bash
         run: |

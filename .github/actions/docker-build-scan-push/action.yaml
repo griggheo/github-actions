@@ -1,0 +1,59 @@
+name: 'Build/Scan/Push/Sign Docker images'
+inputs:
+  destination_registry:
+    description: 'Destination Docker registry'
+    required: false
+    default: 'ghcr.io/codepraxis-io'
+  docker_context_dir:
+    description: 'Docker context directory'
+    required: false
+    default: '.'
+  dockerfile_name:
+    description: 'Dockerfile name'
+    required: false
+    dedault: 'Dockerfile'
+  docker_image_name:
+    description: 'Docker image name'
+    required: true
+  docker_image_tag:
+    description: 'Docker image tag'
+    required: true
+  docker_build_type:
+    description: 'Type of Docker build'
+    required: false
+    default: 'buildx'
+  dockerfile_scanner:
+    description: 'Tool for scanning Dockerfiles'
+    required: false
+    default: 'trivy'
+  docker_image_scanner:
+    description: 'Tool for scanning Docker image'
+    required: false
+    default: 'trivy'
+  scan_result_dir:
+    description: 'Directory for scan results'
+    required: false
+    default: 'scan_results'
+  stop_on_critical_vulns:
+    description: 'Whether to stop when Docker image scanner find critical vulnerabilities'
+    required: false
+    default: 'false'
+  docker_sbom_generator:
+    description: 'Tool for generating SBOM'
+    required: false
+    default: 'syft'
+runs:
+  using: 'docker'
+  image: "Dockerfile"
+  env:
+    DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
+    DOCKER_CONTEXT_DIR: ${{ inputs.docker_context_dir }}
+    DOCKERFILE_NAME: ${{ inputs.dockerfile_name }}
+    DOCKER_IMAGE_NAME: ${{ inputs.docker_image_name }}
+    DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
+    DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
+    DOCKER_IMAGE_SCANNER: ${{ inputs.docker_image_scanner }}
+    DOCKERFILE_SCANNER: ${{ inputs.dockerfile_scanner }}
+    SCAN_RESULT_DIR: ${{ inputs.scan_result_dir }}
+    STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
+    DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
