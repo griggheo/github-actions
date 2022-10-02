@@ -101,13 +101,13 @@ jobs:
       - name: Mark workspace directory as safe
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
         shell: bash
-      - name: Code Checkout
+      - name: Code checkout
         uses: actions/checkout@v2
       - name: Login to destination registry
         shell: bash
         run: |
           docker login --username ${DESTINATION_REGISTRY_USERNAME} --password ${DESTINATION_REGISTRY_PASSWORD} ${DESTINATION_REGISTRY}
-      - name: Install Cosign
+      - name: Install cosign
         uses: sigstore/cosign-installer@main
         with:
           cosign-release: 'v1.12.1'
@@ -118,7 +118,7 @@ jobs:
         run: |
           FROM_IMAGE=$(grep FROM $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME | sed -r 's/FROM\s+//g')
           cosign verify --key env://COSIGN_PUBLIC_KEY $FROM_IMAGE
-      - name: Build Docker Image
+      - name: Build Docker image
         id: build-docker-image
         shell: bash
         run: |
@@ -133,7 +133,7 @@ jobs:
               #docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ 
               docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ --tarPath /workspace/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar --no-push
           fi
-      - name: Scan Docker Image
+      - name: Scan Docker image
         id: scan-docker-image
         shell: bash
         run: |
@@ -166,6 +166,20 @@ jobs:
               echo Running: grype $ARGS
               grype $ARGS
           fi
+      - name: Generate SBOM for Docker image
+        shell: bash
+        run: |
+          if [ "$DOCKER_SBOM_GENERATOR" == "syft" ]; then
+              ARGS="-o json --file $SCAN_RESULT_DIR/syft-sbom-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json packages"
+              if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
+              ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
+              fi
+              if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
+              ARGS="$ARGS file:$DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar"
+              fi
+              echo Running: syft $ARGS
+              syft $ARGS
+          fi
       - name: Upload scan results as artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -182,3 +196,8 @@ jobs:
               echo Running: crane push $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
               crane push $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
           fi
+      - name: Sign Docker image
+        shell: bash
+        run: |
+          cosign sign --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+          cosign verify --key env://COSIGN_PUBLIC_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
