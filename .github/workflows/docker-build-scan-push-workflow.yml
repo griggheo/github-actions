@@ -98,9 +98,9 @@ jobs:
       COSIGN_PUBLIC_KEY: ${{secrets.COSIGN_PUBLIC_KEY}}
       COSIGN_PASSWORD: ${{secrets.COSIGN_PRIVATE_KEY_PASSWORD}}
     steps:
-      # - name: Make repo safe
-      #   run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
-      #   shell: bash
+      - name: Mark workspace directory as safe
+        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+        shell: bash
       - name: Code Checkout
         uses: actions/checkout@v2
       - name: Login to destination registry
