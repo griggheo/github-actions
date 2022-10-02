@@ -92,8 +92,8 @@ jobs:
       SCAN_RESULT_DIR: ${{ inputs.scan_result_dir }}
       STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
       DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
-      DESTINATION_REGISTRY_USERNAME: ${{ secrets.docker-registry-username }}
-      DESTINATION_REGISTRY_PASSWORD: ${{ secrets.docker-registry-password }}
+      DESTINATION_REGISTRY_USERNAME: ${{ secrets.DESTINATION_REGISTRY_USERNAME }}
+      DESTINATION_REGISTRY_PASSWORD: ${{ secrets.DESTINATION_REGISTRY_PASSWORD }}
       COSIGN_PRIVATE_KEY: ${{secrets.COSIGN_PRIVATE_KEY}}
       COSIGN_PUBLIC_KEY: ${{secrets.COSIGN_PUBLIC_KEY}}
       COSIGN_PASSWORD: ${{secrets.COSIGN_PRIVATE_KEY_PASSWORD}}
