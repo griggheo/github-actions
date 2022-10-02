@@ -78,8 +78,8 @@ jobs:
     container:
       image: ghcr.io/codepraxis-io/ubuntu22.04:scantools
       credentials:
-          username: ${{ secrets.docker-registry-username }}
-          password: ${{ secrets.docker-registry-password }}
+        username: ${{ secrets.DESTINATION_REGISTRY_USERNAME }}
+        password: ${{ secrets.DESTINATION_REGISTRY_PASSWORD }}
     env:
       DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
       DOCKER_CONTEXT_DIR: ${{ inputs.docker_context_dir }}
