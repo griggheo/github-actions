@@ -106,7 +106,7 @@ jobs:
       - name: Login to destination registry
         shell: bash
         run: |
-          docker login --username ${{ secrets.DESTINATION_REGISTRY_USERNAME }} --password ${{ secrets.DESTINATION_REGISTRY_PASSWORD }} ${{ inputs.destination-registry }}
+          docker login --username $DESTINATION_REGISTRY_USERNAME --password $DESTINATION_REGISTRY_PASSWORD $DESTINATION_REGISTRY
       - name: Install Cosign
         uses: sigstore/cosign-installer@main
         with:
