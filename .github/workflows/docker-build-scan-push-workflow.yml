@@ -57,15 +57,15 @@ on:
         type: string
         default: 'syft'
     secrets:
-      DESTINATION_REGISTRY_USERNAME:
+      destination_registry_username:
         required: true
-      DESTINATION_REGISTRY_PASSWORD:
+      destination_registry_password:
         required: true
-      COSIGN_PRIVATE_KEY:
+      cosign_private_key:
         required: true
-      COSIGN_PRIVATE_KEY_PASSWORD:
+      cosign_private_key_password:
         required: true
-      COSIGN_PUBLIC_KEY:
+      cosign_public_key:
         required: true
     # outputs:
     #   docker-tag-commit:
@@ -92,11 +92,11 @@ jobs:
       SCAN_RESULT_DIR: ${{ inputs.scan_result_dir }}
       STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
       DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
-      DESTINATION_REGISTRY_USERNAME: ${{ secrets.DESTINATION_REGISTRY_USERNAME }}
-      DESTINATION_REGISTRY_PASSWORD: ${{ secrets.DESTINATION_REGISTRY_PASSWORD }}
-      COSIGN_PRIVATE_KEY: ${{secrets.COSIGN_PRIVATE_KEY}}
-      COSIGN_PUBLIC_KEY: ${{secrets.COSIGN_PUBLIC_KEY}}
-      COSIGN_PASSWORD: ${{secrets.COSIGN_PRIVATE_KEY_PASSWORD}}
+      DESTINATION_REGISTRY_USERNAME: ${{secrets.destination_registry_username}}
+      DESTINATION_REGISTRY_PASSWORD: ${{secrets.destination_registry_password}}
+      COSIGN_PRIVATE_KEY: ${{secrets.cosign_private_key}}
+      COSIGN_PUBLIC_KEY: ${{secrets.cosign_public_key}}
+      COSIGN_PASSWORD: ${{secrets.cosign_private_key_password}}
     steps:
       - name: Mark workspace directory as safe
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
@@ -106,7 +106,7 @@ jobs:
       - name: Login to destination registry
         shell: bash
         run: |
-          docker login --username $DESTINATION_REGISTRY_USERNAME --password $DESTINATION_REGISTRY_PASSWORD $DESTINATION_REGISTRY
+          docker login --username ${DESTINATION_REGISTRY_USERNAME} --password ${DESTINATION_REGISTRY_PASSWORD} ${DESTINATION_REGISTRY}
       - name: Install Cosign
         uses: sigstore/cosign-installer@main
         with:
