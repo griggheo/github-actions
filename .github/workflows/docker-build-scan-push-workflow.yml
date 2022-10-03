@@ -76,7 +76,7 @@ jobs:
   docker-build-scan-push:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/codepraxis-io/ubuntu22.04:scantools
+      image: ghcr.io/codepraxis-io/ubuntu22.04:cicd
       credentials:
         username: ${{ secrets.DESTINATION_REGISTRY_USERNAME }}
         password: ${{ secrets.DESTINATION_REGISTRY_PASSWORD }}
