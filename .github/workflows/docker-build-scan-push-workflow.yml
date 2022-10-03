@@ -107,12 +107,12 @@ jobs:
         shell: bash
         run: |
           docker login --username ${DESTINATION_REGISTRY_USERNAME} --password ${DESTINATION_REGISTRY_PASSWORD} ${DESTINATION_REGISTRY}
-      - name: Install cosign
-        uses: sigstore/cosign-installer@main
-        with:
-          cosign-release: 'v1.12.1'
-      - name: Check cosign install
-        run: cosign version
+      # - name: Install cosign
+      #   uses: sigstore/cosign-installer@main
+      #   with:
+      #     cosign-release: 'v1.12.1'
+      # - name: Check cosign install
+      #   run: cosign version
       - name: Verify signature of base Docker image
         shell: bash
         run: |
@@ -131,6 +131,7 @@ jobs:
           if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
               echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with kaniko
               #docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ 
+              echo Running: docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ --tarPath /workspace/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar --no-push
               docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ --tarPath /workspace/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar --no-push
           fi
       - name: Scan Docker image
