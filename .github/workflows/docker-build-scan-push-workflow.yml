@@ -122,6 +122,9 @@ jobs:
         id: build-docker-image
         shell: bash
         run: |
+          pwd
+          ls -la
+          find .
           if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
               echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with buildx
               pushd $DOCKER_CONTEXT_DIR
