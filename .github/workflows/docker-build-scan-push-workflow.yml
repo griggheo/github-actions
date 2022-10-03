@@ -107,82 +107,51 @@ jobs:
         shell: bash
         run: |
           docker login --username ${DESTINATION_REGISTRY_USERNAME} --password ${DESTINATION_REGISTRY_PASSWORD} ${DESTINATION_REGISTRY}
-      # - name: Install cosign
-      #   uses: sigstore/cosign-installer@main
-      #   with:
-      #     cosign-release: 'v1.12.1'
-      # - name: Check cosign install
-      #   run: cosign version
       - name: Verify signature of base Docker image
         shell: bash
         run: |
           FROM_IMAGE=$(grep FROM $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME | sed -r 's/FROM\s+//g')
           cosign verify --key env://COSIGN_PUBLIC_KEY $FROM_IMAGE
-      - name: Build Docker image
-        id: build-docker-image
+      - name: Build Docker image with buildx
+        if: ${{ inputs.docker_build_type == 'buildx' }}
+        id: build-docker-image-buildx
         shell: bash
         run: |
-          pwd
-          ls -la
-          find .
-          if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
-              echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with buildx
-              pushd $DOCKER_CONTEXT_DIR
-                  docker buildx build -t $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG . -f $DOCKERFILE_NAME
-              popd
-          fi
-          if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
-              echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with kaniko
-              #docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ 
-              echo Running: docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ --tarPath /workspace/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar --no-push
-              docker run -v `pwd`/$DOCKER_CONTEXT_DIR:/workspace -v $HOME/.docker/config.json:/kaniko/.docker/config.json:ro gcr.io/kaniko-project/executor:latest --dockerfile /workspace/$DOCKERFILE_NAME --destination $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG --context dir:///workspace/ --tarPath /workspace/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar --no-push
-          fi
+          echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with buildx
+          pushd $DOCKER_CONTEXT_DIR
+              docker buildx build -t $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG . -f $DOCKERFILE_NAME
+          popd
       - name: Scan Docker image
         id: scan-docker-image
         shell: bash
         run: |
           mkdir -p $SCAN_RESULT_DIR
           if [ "$DOCKER_IMAGE_SCANNER" == "trivy" ]; then
-              ARGS="-f json -o $SCAN_RESULT_DIR/trivy-scan-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json"
-              if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
+            ARGS="-f json -o $SCAN_RESULT_DIR/trivy-scan-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json"
+            if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
               ARGS="--exit-code 1 --severity CRITICAL $ARGS"
-              fi
-              if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
-              ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
-              fi
-              if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
-              ARGS="$ARGS --input $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar"
-              fi
-              echo Running: trivy image $ARGS
-              trivy image $ARGS
+            fi
+            ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
+            echo Running: trivy image $ARGS
+            trivy image $ARGS
           fi
           if [ "$DOCKER_IMAGE_SCANNER" == "grype" ]; then
-              ARGS="-o json --file $SCAN_RESULT_DIR/grype-scan-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json"
-              if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
+            ARGS="-o json --file $SCAN_RESULT_DIR/grype-scan-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json"
+            if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
               ARGS="-f Critical $ARGS"
-              fi
-              if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
-              ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
-              fi
-              if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
-              ARGS="$ARGS $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar"
-              fi
-              echo Running: grype $ARGS
-              grype $ARGS
+            fi
+            ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
+            echo Running: grype $ARGS
+            grype $ARGS
           fi
       - name: Generate SBOM for Docker image
         shell: bash
         run: |
           if [ "$DOCKER_SBOM_GENERATOR" == "syft" ]; then
-              ARGS="-o json --file $SCAN_RESULT_DIR/syft-sbom-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json packages"
-              if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
-              ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
-              fi
-              if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
-              ARGS="$ARGS file:$DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar"
-              fi
-              echo Running: syft $ARGS
-              syft $ARGS
+            ARGS="-o json --file $SCAN_RESULT_DIR/syft-sbom-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json packages"
+            ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
+            echo Running: syft $ARGS
+            syft $ARGS
           fi
       - name: Upload scan results as artifacts
         uses: actions/upload-artifact@v3
@@ -192,14 +161,8 @@ jobs:
       - name: Push Docker Image
         shell: bash
         run: |
-          if [ "$DOCKER_BUILD_TYPE" == "buildx" ]; then
-              docker tag $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
-              docker push $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
-          fi
-          if [ "$DOCKER_BUILD_TYPE" == "kaniko" ]; then
-              echo Running: crane push $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
-              crane push $DOCKER_CONTEXT_DIR/$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.tar $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
-          fi
+          docker tag $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+          docker push $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
       - name: Sign Docker image
         shell: bash
         run: |
