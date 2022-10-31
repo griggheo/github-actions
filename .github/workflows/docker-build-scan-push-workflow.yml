@@ -57,6 +57,11 @@ on:
         required: false
         default: 'false'
         type: string
+      verify_base_image_signature:
+        description: 'Whether to verify base Docker image signature with cosign'
+        required: false
+        default: 'true'
+        type: string
       docker_sbom_generator:
         description: 'Tool for generating SBOM'
         required: false
@@ -133,6 +138,7 @@ jobs:
         run: |
           docker login --username ${DESTINATION_REGISTRY_USERNAME} --password ${DESTINATION_REGISTRY_PASSWORD} ${DESTINATION_REGISTRY}
       - name: Verify signature of base Docker image
+        if: inputs.verify_base_image_signature == 'true'
         shell: bash
         run: |
           FROM_IMAGE=$(grep FROM $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME | sed -r 's/FROM\s+//g')
