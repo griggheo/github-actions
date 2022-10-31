@@ -27,7 +27,7 @@ on:
         required: false 
         default: ''
         type: string
-      docker_tag_suffix:
+      docker_image_tag_suffix:
         description: 'Docker image tag suffix'
         required: false
         default: ''
