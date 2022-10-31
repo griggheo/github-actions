@@ -81,8 +81,8 @@ on:
 jobs:
   docker-build-scan-push:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/codepraxis-io/ubuntu22.04:cicd
+    # container:
+    #   image: ghcr.io/codepraxis-io/ubuntu22.04:cicd
       # credentials:
       #   username: ${{secrets.GHCR_USERNAME}}
       #   password: ${{secrets.GHCR_TOKEN}}
