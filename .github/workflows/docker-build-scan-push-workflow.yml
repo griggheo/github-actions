@@ -62,17 +62,17 @@ on:
         required: false
         type: string
         default: 'syft'
-    # secrets:
-    #   destination_registry_username:
-    #     required: true
-    #   destination_registry_password:
-    #     required: true
-    #   cosign_private_key:
-    #     required: true
-    #   cosign_private_key_password:
-    #     required: true
-    #   cosign_public_key:
-    #     required: true
+    secrets:
+      destination_registry_username:
+        required: true
+      destination_registry_password:
+        required: true
+      cosign_private_key:
+        required: true
+      cosign_private_key_password:
+        required: true
+      cosign_public_key:
+        required: true
     # outputs:
     #   docker-tag-commit:
     #     description: docker tag to be used in later actions
@@ -81,11 +81,11 @@ on:
 jobs:
   docker-build-scan-push:
     runs-on: ubuntu-latest
-    # container:
-    #   image: ghcr.io/codepraxis-io/ubuntu22.04:cicd
-      # credentials:
-      #   username: ${{secrets.GHCR_USERNAME}}
-      #   password: ${{secrets.GHCR_TOKEN}}
+    container:
+      image: ghcr.io/codepraxis-io/ubuntu22.04:cicd
+      credentials:
+        username: ${{secrets.destination_registry_username}}
+        password: ${{secrets.destination_registry_password}}
     env:
       DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
       DOCKER_CONTEXT_DIR: ${{ inputs.docker_context_dir }}
@@ -99,11 +99,11 @@ jobs:
       SCAN_RESULT_DIR: ${{ inputs.scan_result_dir }}
       STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
       DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
-      DESTINATION_REGISTRY_USERNAME: ${{secrets.GHCR_USERNAME}}
-      DESTINATION_REGISTRY_PASSWORD: ${{secrets.GHCR_TOKEN}}
-      COSIGN_PRIVATE_KEY: ${{secrets.COSIGN_PRIVATE_KEY}}
-      COSIGN_PUBLIC_KEY: ${{secrets.COSIGN_PUBLIC_KEY}}
-      COSIGN_PASSWORD: ${{secrets.COSIGN_PRIVATE_KEY_PASSWORD}}
+      DESTINATION_REGISTRY_USERNAME: ${{secrets.destination_registry_username}}
+      DESTINATION_REGISTRY_PASSWORD: ${{secrets.destination_registry_password}}
+      COSIGN_PRIVATE_KEY: ${{secrets.cosign_private_key}}
+      COSIGN_PUBLIC_KEY: ${{secrets.cosign_public_key}}
+      COSIGN_PASSWORD: ${{secrets.cosign_private_key_password}}
     steps:
       - name: Mark workspace directory as safe
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
