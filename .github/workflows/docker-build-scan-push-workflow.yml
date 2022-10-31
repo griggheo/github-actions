@@ -83,9 +83,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/codepraxis-io/ubuntu22.04:cicd
-      credentials:
-        username: ${{secrets.GHCR_USERNAME}}
-        password: ${{secrets.GHCR_TOKEN}}
+      # credentials:
+      #   username: ${{secrets.GHCR_USERNAME}}
+      #   password: ${{secrets.GHCR_TOKEN}}
     env:
       DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
       DOCKER_CONTEXT_DIR: ${{ inputs.docker_context_dir }}
