@@ -24,7 +24,13 @@ on:
         type: string
       docker_image_tag:
         description: 'Docker image tag'
-        required: true
+        required: false 
+        default: ''
+        type: string
+      docker_tag_suffix:
+        description: 'Docker image tag suffix'
+        required: false
+        default: ''
         type: string
       docker_build_type:
         description: 'Type of Docker build'
@@ -86,6 +92,7 @@ jobs:
       DOCKERFILE_NAME: ${{ inputs.dockerfile_name }}
       DOCKER_IMAGE_NAME: ${{ inputs.docker_image_name }}
       DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
+      DOCKER_IMAGE_TAG_SUFFIX: ${{ inputs.docker_image_tag_suffix }}
       DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
       DOCKERFILE_SCANNER: ${{ inputs.dockerfile_scanner }}
       DOCKER_IMAGE_SCANNER: ${{ inputs.docker_image_scanner }}
@@ -103,6 +110,21 @@ jobs:
         shell: bash
       - name: Code checkout
         uses: actions/checkout@v2
+      - name: Prepare
+        id: prep
+        run: |
+          VERSION=sha-${GITHUB_SHA::8}
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF/refs\/tags\//}
+          fi
+          IMAGE_TAG=$VERSION
+          if [ "$DOCKER_IMAGE_TAG" != "" ]; then
+            IMAGE_TAG=$DOCKER_IMAGE_TAG
+          fi
+          if [ "$DOCKER_IMAGE_TAG_SUFFIX" != "" ]; then
+            IMAGE_TAG="$IMAGE_TAG-$DOCKER_IMAGE_TAG_SUFFIX"
+          fi
+          echo ::set-output name=IMAGE_TAG::${IMAGE_TAG}
       - name: Login to destination registry
         shell: bash
         run: |
@@ -117,39 +139,42 @@ jobs:
         id: build-docker-image-buildx
         shell: bash
         run: |
+          IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with buildx
           pushd $DOCKER_CONTEXT_DIR
-              docker buildx build -t $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG . -f $DOCKERFILE_NAME
+              docker buildx build -t $DOCKER_IMAGE_NAME:$IMAGE_TAG . -f $DOCKERFILE_NAME
           popd
       - name: Scan Docker image
         id: scan-docker-image
         shell: bash
         run: |
+          IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           mkdir -p $SCAN_RESULT_DIR
           if [ "$DOCKER_IMAGE_SCANNER" == "trivy" ]; then
-            ARGS="-f json -o $SCAN_RESULT_DIR/trivy-scan-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json"
+            ARGS="-f json -o $SCAN_RESULT_DIR/trivy-scan-$DOCKER_IMAGE_NAME-$IMAGE_TAG.json"
             if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
               ARGS="--exit-code 1 --severity CRITICAL $ARGS"
             fi
-            ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
+            ARGS="$ARGS $DOCKER_IMAGE_NAME:$IMAGE_TAG"
             echo Running: trivy image $ARGS
             trivy image $ARGS
           fi
           if [ "$DOCKER_IMAGE_SCANNER" == "grype" ]; then
-            ARGS="-o json --file $SCAN_RESULT_DIR/grype-scan-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json"
+            ARGS="-o json --file $SCAN_RESULT_DIR/grype-scan-$DOCKER_IMAGE_NAME-$IMAGE_TAG.json"
             if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
               ARGS="-f Critical $ARGS"
             fi
-            ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
+            ARGS="$ARGS $DOCKER_IMAGE_NAME:$IMAGE_TAG"
             echo Running: grype $ARGS
             grype $ARGS
           fi
       - name: Generate SBOM for Docker image
         shell: bash
         run: |
+          IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           if [ "$DOCKER_SBOM_GENERATOR" == "syft" ]; then
-            ARGS="-o json --file $SCAN_RESULT_DIR/syft-sbom-$DOCKER_IMAGE_NAME-$DOCKER_IMAGE_TAG.json packages"
-            ARGS="$ARGS $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG"
+            ARGS="-o json --file $SCAN_RESULT_DIR/syft-sbom-$DOCKER_IMAGE_NAME-$IMAGE_TAG.json packages"
+            ARGS="$ARGS $DOCKER_IMAGE_NAME:$IMAGE_TAG"
             echo Running: syft $ARGS
             syft $ARGS
           fi
@@ -161,10 +186,12 @@ jobs:
       - name: Push Docker Image
         shell: bash
         run: |
-          docker tag $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
-          docker push $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+          IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
+          docker tag $DOCKER_IMAGE_NAME:$IMAGE_TAG $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
+          docker push $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
       - name: Sign Docker image
         shell: bash
         run: |
-          cosign sign --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
-          cosign verify --key env://COSIGN_PUBLIC_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+          IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
+          cosign sign --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
+          cosign verify --key env://COSIGN_PUBLIC_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
