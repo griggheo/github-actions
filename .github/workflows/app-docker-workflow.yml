@@ -12,7 +12,7 @@ on:
         description: 'Destination Docker registry'
         required: false
         type: string
-        default: 'ghcr.io/codepraxis-io'
+        default: 'ghcr.io'
       dockerfile_name:
         description: 'Dockerfile name'
         required: false

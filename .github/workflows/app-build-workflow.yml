@@ -13,6 +13,15 @@ on:
         required: true
         default: ''
         type: string
+      cosign_blob_name:
+        description: 'OCI blob artifact name for cosign upload'
+        required: true
+        type: string
+      destination_registry:
+        description: 'Destination Docker registry'
+        required: false
+        type: string
+        default: 'ghcr.io'
       docker_build_image:
         description: 'Image to be used to build the app'
         required: true
@@ -46,8 +55,10 @@ jobs:
     env:
       BUILD_APP_SCRIPT: ${{ inputs.build_app_script }}
       BUILD_DIR: ${{ inputs.build_dir }}
+      DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
       DOCKER_BUILD_IMAGE: ${{ inputs.docker_build_image }}
       DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
+      COSIGN_BLOB_NAME: ${{ inputs.cosign_blob_name }}
       COSIGN_PRIVATE_KEY: ${{secrets.cosign_private_key}}
       COSIGN_PUBLIC_KEY: ${{secrets.cosign_public_key}}
       COSIGN_PASSWORD: ${{secrets.cosign_private_key_password}}
@@ -57,12 +68,29 @@ jobs:
         shell: bash
       - name: Code checkout
         uses: actions/checkout@v3
+      - name: Prepare
+        id: prep
+        shell: bash
+        run: |
+          GITHUB_SHA=${{github.sha}}
+          GITHUB_REF=${{github.ref}}
+          BLOB_TAG=${GITHUB_SHA::8}
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            BLOB_TAG=${GITHUB_REF/refs\/tags\//}
+          fi
+          echo "BLOB_TAG=${BLOB_TAG}" >> $GITHUB_OUTPUT
       - name: Build application using provided script
         shell: bash
         run: |
           bash $BUILD_APP_SCRIPT
-      - name: Upload generated build artifacts as GHA artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-artifacts
-          path: ${{env.BUILD_DIR}}
+      - name: Upload generated build artifacts as OCI blob using cosign
+      shell: bash
+        run: |
+          BLOB_TAG=${{ steps.prep.outputs.BLOB_TAG }}
+          zip $BUILD_DIR
+          cosign upload blob -f $BUILD_DIR.zip --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG
+
+        # uses: actions/upload-artifact@v3
+        # with:
+        #   name: build-artifacts
+        #   path: ${{env.BUILD_DIR}}
