@@ -94,6 +94,7 @@ jobs:
         run: |
           BLOB_TAG=${{ steps.prep.outputs.BLOB_TAG }}
           tar cfz $BUILD_DIR.tar.gz $BUILD_DIR/
+          export COSIGN_DOCKER_MEDIA_TYPES=1
           cosign upload blob -f $BUILD_DIR.tar.gz $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG
           cosign sign --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG
         # uses: actions/upload-artifact@v3
