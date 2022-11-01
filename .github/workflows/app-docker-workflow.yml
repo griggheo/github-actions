@@ -143,6 +143,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p $SCAN_RESULT_DIR
+
+          echo github.run_id=${{github.run_id}}
+          echo github.run_number=${{github.run_number}}
+
           GITHUB_SHA=${{github.sha}}
           GITHUB_REF=${{github.ref}}
           VERSION=${GITHUB_SHA::8}
