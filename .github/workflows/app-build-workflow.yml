@@ -83,13 +83,13 @@ jobs:
         shell: bash
         run: |
           bash $BUILD_APP_SCRIPT
-      - name: Upload generated build artifacts as OCI blob using cosign
+      - name: Upload and sign generated build artifacts as OCI blob using cosign
         shell: bash
         run: |
           BLOB_TAG=${{ steps.prep.outputs.BLOB_TAG }}
-          tar cvfz $BUILD_DIR.tar.gz $BUILD_DIR/
-          cosign upload blob -f $BUILD_DIR.tar.gz --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG
-
+          tar cfz $BUILD_DIR.tar.gz $BUILD_DIR/
+          cosign upload blob -f $BUILD_DIR.tar.gz $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG
+          cosign sign --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG
         # uses: actions/upload-artifact@v3
         # with:
         #   name: build-artifacts
