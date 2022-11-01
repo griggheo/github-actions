@@ -60,7 +60,7 @@ jobs:
       - name: Build application using provided script
         shell: bash
         run: |
-          bash $BUILD_SCRIPT
+          bash $BUILD_APP_SCRIPT
       - name: Upload generated build artifacts as GHA artifacts
         uses: actions/upload-artifact@v3
         with:
