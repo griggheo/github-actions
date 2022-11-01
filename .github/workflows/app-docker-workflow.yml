@@ -125,7 +125,7 @@ jobs:
       DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
       DOCKERFILE_SCANNER: ${{ inputs.dockerfile_scanner }}
       DOCKER_IMAGE_SCANNER: ${{ inputs.docker_image_scanner }}
-      SCAN_RESULT_DIR: "${{ inputs.scan_result_dir }}_${{ github.job }}"
+      SCAN_RESULT_DIR: "${{ inputs.scan_result_dir }}-${{ inputs.docker_image_tag_suffix }}"
       STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
       DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
       COSIGN_BLOB_NAME: ${{ inputs.cosign_blob_name }}
