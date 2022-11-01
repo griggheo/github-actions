@@ -82,7 +82,6 @@ on:
         required: false
         default: 'true'
         type: string
-
     secrets:
       destination_registry_username:
         required: true
@@ -195,7 +194,6 @@ jobs:
               docker buildx build -t $DOCKER_IMAGE_NAME:$IMAGE_TAG . -f $DOCKERFILE_NAME
           popd
       - name: Scan Docker image
-        id: scan-docker-image
         shell: bash
         run: |
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
