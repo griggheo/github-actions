@@ -3,24 +3,44 @@ name: Docker Build Scan Push Workflow for Applications
 on:
   workflow_call:
     inputs:
+      build_dir:
+        description: 'Directory where the build script saves its artifacts'
+        required: false
+        default: ''
+        type: string
       destination_registry:
         description: 'Destination Docker registry'
         required: false
         type: string
         default: 'ghcr.io/codepraxis-io'
-      docker_context_dir:
-        description: 'Docker context directory'
-        required: false
-        type: string
-        default: '.'
       dockerfile_name:
         description: 'Dockerfile name'
         required: false
         type: string
         default: 'Dockerfile'
+      dockerfile_scanner:
+        description: 'Tool for scanning Dockerfiles'
+        required: false
+        default: 'trivy'
+        type: string
+      docker_build_type:
+        description: 'Type of Docker build'
+        required: false
+        default: 'buildx'
+        type: string
+      docker_context_dir:
+        description: 'Docker context directory'
+        required: false
+        type: string
+        default: '.'
       docker_image_name:
         description: 'Docker image name'
         required: true
+        type: string
+      docker_image_scanner:
+        description: 'Tool for scanning Docker image'
+        required: false
+        default: 'trivy'
         type: string
       docker_image_tag:
         description: 'Docker image tag'
@@ -37,20 +57,15 @@ on:
         required: false
         default: ''
         type: string
-      docker_build_type:
-        description: 'Type of Docker build'
+      docker_sbom_generator:
+        description: 'Tool for generating SBOM'
         required: false
-        default: 'buildx'
         type: string
-      dockerfile_scanner:
-        description: 'Tool for scanning Dockerfiles'
+        default: 'syft'
+      download_build_artifacts:
+        description: 'Whether to download the build artifacts before building the Docker image'
         required: false
-        default: 'trivy'
-        type: string
-      docker_image_scanner:
-        description: 'Tool for scanning Docker image'
-        required: false
-        default: 'trivy'
+        default: 'true'
         type: string
       scan_result_dir:
         description: 'Directory for scan results'
@@ -67,11 +82,7 @@ on:
         required: false
         default: 'true'
         type: string
-      docker_sbom_generator:
-        description: 'Tool for generating SBOM'
-        required: false
-        type: string
-        default: 'syft'
+
     secrets:
       destination_registry_username:
         required: true
@@ -168,9 +179,14 @@ jobs:
             ARGS="-f json -o $SCAN_RESULT_DIR/trivy-dockerfile.json $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME"
             trivy config $ARGS
           fi
-      - name: Build Docker image with buildx
+      - name: Download generated build artifacts
+        if: ${{ inputs.download_build_artifacts == 'true' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: ${{env.BUILD_DIR}}
+      - name: Build Docker image
         if: ${{ inputs.docker_build_type == 'buildx' }}
-        id: build-docker-image-buildx
         shell: bash
         run: |
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
