@@ -99,7 +99,7 @@ on:
     #     value: ${{ jobs.docker-build-push.outputs.docker-tag-commit }}
 
 jobs:
-  app-docker
+  app-docker:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/codepraxis-io/ubuntu22.04:cicd
