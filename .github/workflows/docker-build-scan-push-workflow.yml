@@ -212,11 +212,6 @@ jobs:
             echo Running: syft $ARGS
             syft $ARGS
           fi
-      - name: Upload scan results as artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{env.SCAN_RESULT_DIR}}
-          path: ${{env.SCAN_RESULT_DIR}}
       - name: Push Docker Image
         shell: bash
         run: |
@@ -228,8 +223,29 @@ jobs:
         run: |
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           cosign sign --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
+      - name: Attach scan result attestations to Docker image
+        shell: bash
+        run: |
+          for scan_result_file in $(ls $SCAN_RESULT_DIR); do
+            cosign attest --predicate $SCAN_RESULT_DIR/$scan_result_file --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
+          done
       - name: Verify Docker image signature
         shell: bash
         run: |
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           cosign verify --key env://COSIGN_PUBLIC_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
+      - name: Verify scan result attestations
+        shell: bash
+        run: |
+          ATTESTATION_PAYLOAD=$SCAN_RESULT_DIR/attestation_payload.json
+          cosign verify-attestation --key env://COSIGN_PUBLIC_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG | jq --slurp 'map(.payload | @base64d | fromjson | .predicate.Data)' > $ATTESTATION_PAYLOAD
+          keys=$(cat $ATTESTATION_PAYLOAD | jq -r 'keys[]')
+          for key in $keys; do
+            echo Saving payload \#$key to file $SCAN_RESULT_DIR/attestation_payload_$key.json
+            cat $ATTESTATION_PAYLOAD | jq -r  ".[$key]"  > $SCAN_RESULT_DIR/attestation_payload_$key.json
+          done
+      - name: Upload scan results as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{env.SCAN_RESULT_DIR}}
+          path: ${{env.SCAN_RESULT_DIR}}
