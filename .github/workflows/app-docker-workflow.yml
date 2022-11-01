@@ -108,6 +108,8 @@ jobs:
         password: ${{secrets.destination_registry_password}}
     env:
       DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
+      DESTINATION_REGISTRY_USERNAME: ${{secrets.destination_registry_username}}
+      DESTINATION_REGISTRY_PASSWORD: ${{secrets.destination_registry_password}}
       DOCKER_CONTEXT_DIR: ${{ inputs.docker_context_dir }}
       DOCKERFILE_NAME: ${{ inputs.dockerfile_name }}
       DOCKER_IMAGE_NAME: ${{ inputs.docker_image_name }}
@@ -120,8 +122,6 @@ jobs:
       SCAN_RESULT_DIR: ${{ inputs.scan_result_dir }}
       STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
       DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
-      DESTINATION_REGISTRY_USERNAME: ${{secrets.destination_registry_username}}
-      DESTINATION_REGISTRY_PASSWORD: ${{secrets.destination_registry_password}}
       COSIGN_PRIVATE_KEY: ${{secrets.cosign_private_key}}
       COSIGN_PUBLIC_KEY: ${{secrets.cosign_public_key}}
       COSIGN_PASSWORD: ${{secrets.cosign_private_key_password}}

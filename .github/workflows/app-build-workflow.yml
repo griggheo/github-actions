@@ -56,6 +56,8 @@ jobs:
       BUILD_APP_SCRIPT: ${{ inputs.build_app_script }}
       BUILD_DIR: ${{ inputs.build_dir }}
       DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
+      DESTINATION_REGISTRY_USERNAME: ${{secrets.destination_registry_username}}
+      DESTINATION_REGISTRY_PASSWORD: ${{secrets.destination_registry_password}}
       DOCKER_BUILD_IMAGE: ${{ inputs.docker_build_image }}
       DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
       COSIGN_BLOB_NAME: ${{ inputs.cosign_blob_name }}
@@ -83,6 +85,10 @@ jobs:
         shell: bash
         run: |
           bash $BUILD_APP_SCRIPT
+      - name: Login to destination registry
+        shell: bash
+        run: |
+          docker login --username ${DESTINATION_REGISTRY_USERNAME} --password ${DESTINATION_REGISTRY_PASSWORD} ${DESTINATION_REGISTRY}
       - name: Upload and sign generated build artifacts as OCI blob using cosign
         shell: bash
         run: |
