@@ -32,6 +32,11 @@ on:
         required: false
         default: ''
         type: string
+      docker_run_image:
+        description: 'Image to be used as FROM image in app Dockerfile'
+        required: false
+        default: ''
+        type: string
       docker_build_type:
         description: 'Type of Docker build'
         required: false
@@ -98,6 +103,7 @@ jobs:
       DOCKER_IMAGE_NAME: ${{ inputs.docker_image_name }}
       DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
       DOCKER_IMAGE_TAG_SUFFIX: ${{ inputs.docker_image_tag_suffix }}
+      DOCKER_RUN_IMAGE: ${{ inputs.docker_run_image }}
       DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
       DOCKERFILE_SCANNER: ${{ inputs.dockerfile_scanner }}
       DOCKER_IMAGE_SCANNER: ${{ inputs.docker_image_scanner }}
@@ -143,8 +149,25 @@ jobs:
         if: inputs.verify_base_image_signature == 'true'
         shell: bash
         run: |
-          FROM_IMAGE=$(grep FROM $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME | sed -r 's/FROM\s+//g')
-          cosign verify --key env://COSIGN_PUBLIC_KEY $FROM_IMAGE
+          FROM_IMAGE=$DOCKER_RUN_IMAGE
+          if [ "$FROM_IMAGE" == "" ]; then
+            FROM_IMAGE=$(grep FROM $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME | sed -r 's/FROM\s+//g')
+            if [ "$FROM_IMAGE" == '${BASE_IMAGE}' ]; then
+              FROM_IMAGE=$(grep 'ARG BASE_IMAGE' $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME | sed -r 's/ARG BASE_IMAGE=//g')
+            fi
+            cosign verify --key $COSIGN_PUBLIC_KEY $FROM_IMAGE
+          fi
+      - name: Scan Dockerfile for vulnerabilities
+        shell: bash
+        run: |
+          mkdir -p $SCAN_RESULT_DIR
+          if [ "$DOCKERFILE_SCANNER" == "semgrep" ]; then
+            semgrep --config=auto $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME --json -o $SCAN_RESULT_DIR/semgrep-dockerfile.json
+          fi
+          if [ "$DOCKERFILE_SCANNER" == "trivy" ]; then
+            ARGS="-f json -o $SCAN_RESULT_DIR/trivy-dockerfile.json $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME"
+            trivy config $ARGS
+          fi
       - name: Build Docker image with buildx
         if: ${{ inputs.docker_build_type == 'buildx' }}
         id: build-docker-image-buildx
@@ -162,7 +185,7 @@ jobs:
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           mkdir -p $SCAN_RESULT_DIR
           if [ "$DOCKER_IMAGE_SCANNER" == "trivy" ]; then
-            ARGS="-f json -o $SCAN_RESULT_DIR/trivy-scan-$DOCKER_IMAGE_NAME-$IMAGE_TAG.json"
+            ARGS="-f json -o $SCAN_RESULT_DIR/trivy-scan.json"
             if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
               ARGS="--exit-code 1 --severity CRITICAL $ARGS"
             fi
@@ -171,7 +194,7 @@ jobs:
             trivy image $ARGS
           fi
           if [ "$DOCKER_IMAGE_SCANNER" == "grype" ]; then
-            ARGS="-o json --file $SCAN_RESULT_DIR/grype-scan-$DOCKER_IMAGE_NAME-$IMAGE_TAG.json"
+            ARGS="-o json --file $SCAN_RESULT_DIR/grype-scan.json"
             if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
               ARGS="-f Critical $ARGS"
             fi
@@ -184,7 +207,7 @@ jobs:
         run: |
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           if [ "$DOCKER_SBOM_GENERATOR" == "syft" ]; then
-            ARGS="-o json --file $SCAN_RESULT_DIR/syft-sbom-$DOCKER_IMAGE_NAME-$IMAGE_TAG.json packages"
+            ARGS="-o json --file $SCAN_RESULT_DIR/syft-sbom.json packages"
             ARGS="$ARGS $DOCKER_IMAGE_NAME:$IMAGE_TAG"
             echo Running: syft $ARGS
             syft $ARGS
@@ -200,9 +223,13 @@ jobs:
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           docker tag $DOCKER_IMAGE_NAME:$IMAGE_TAG $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
           docker push $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
-      - name: Sign Docker image
+      - name: Sign Docker image with cosign
         shell: bash
         run: |
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           cosign sign --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
+      - name: Verify Docker image signature
+        shell: bash
+        run: |
+          IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           cosign verify --key env://COSIGN_PUBLIC_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
