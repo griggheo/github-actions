@@ -1,0 +1,68 @@
+name: Docker Build Scan Push Workflow
+
+on:
+  workflow_call:
+    inputs:
+      build_app_script:
+        description: 'Script to call to build the app'
+        required: false
+        default: './.github/scripts/build-app.sh'
+        type: string
+      build_dir:
+        description: 'Directory where the build script saves its artifacts'
+        required: true
+        default: ''
+        type: string
+      docker_build_image:
+        description: 'Image to be used to build the app'
+        required: true
+        default: ''
+        type: string
+      docker_build_type:
+        description: 'Type of Docker build'
+        required: false
+        default: 'buildx'
+        type: string
+    secrets:
+      destination_registry_username:
+        required: true
+      destination_registry_password:
+        required: true
+      cosign_private_key:
+        required: true
+      cosign_private_key_password:
+        required: true
+      cosign_public_key:
+        required: true
+
+jobs:
+  build-app:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.docker_build_image }}
+      credentials:
+        username: ${{secrets.destination_registry_username}}
+        password: ${{secrets.destination_registry_password}}
+    env:
+      BUILD_APP_SCRIPT: ${{ inputs.build_app_script }}
+      BUILD_DIR: ${{ inputs.build_dir }}
+      DOCKER_BUILD_IMAGE: ${{ inputs.docker_build_image }}
+      DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
+      COSIGN_PRIVATE_KEY: ${{secrets.cosign_private_key}}
+      COSIGN_PUBLIC_KEY: ${{secrets.cosign_public_key}}
+      COSIGN_PASSWORD: ${{secrets.cosign_private_key_password}}
+    steps:
+      - name: Mark workspace directory as safe
+        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+        shell: bash
+      - name: Code checkout
+        uses: actions/checkout@v3
+      - name: Build application using provided script
+        shell: bash
+        run: |
+          bash $BUILD_SCRIPT
+      - name: Upload generated build artifacts as GHA artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: ${{env.BUILD_DIR}}
