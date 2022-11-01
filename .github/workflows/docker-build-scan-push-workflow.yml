@@ -226,6 +226,7 @@ jobs:
       - name: Attach scan result attestations to Docker image
         shell: bash
         run: |
+          IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           for scan_result_file in $(ls $SCAN_RESULT_DIR); do
             cosign attest --predicate $SCAN_RESULT_DIR/$scan_result_file --key env://COSIGN_PRIVATE_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG
           done
@@ -237,6 +238,7 @@ jobs:
       - name: Verify scan result attestations
         shell: bash
         run: |
+          IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           ATTESTATION_PAYLOAD=$SCAN_RESULT_DIR/attestation_payload.json
           cosign verify-attestation --key env://COSIGN_PUBLIC_KEY $DESTINATION_REGISTRY/$DOCKER_IMAGE_NAME:$IMAGE_TAG | jq --slurp 'map(.payload | @base64d | fromjson | .predicate.Data)' > $ATTESTATION_PAYLOAD
           keys=$(cat $ATTESTATION_PAYLOAD | jq -r 'keys[]')
