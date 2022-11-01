@@ -10,7 +10,8 @@ on:
         type: string
       cosign_blob_name:
         description: 'OCI blob artifact name for cosign upload'
-        required: true
+        required: false
+        default: ''
         type: string
       destination_registry:
         description: 'Destination Docker registry'
