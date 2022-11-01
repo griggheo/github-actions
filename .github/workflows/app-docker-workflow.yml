@@ -125,7 +125,7 @@ jobs:
       DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
       DOCKERFILE_SCANNER: ${{ inputs.dockerfile_scanner }}
       DOCKER_IMAGE_SCANNER: ${{ inputs.docker_image_scanner }}
-      SCAN_RESULT_DIR: ${{ inputs.scan_result_dir }}
+      SCAN_RESULT_DIR: "${{ inputs.scan_result_dir }}_${{ github.job }}"
       STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
       DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
       COSIGN_BLOB_NAME: ${{ inputs.cosign_blob_name }}
@@ -200,8 +200,8 @@ jobs:
           tar xf $BUILD_DIR.tar
           # if cyclonedx SBOM is present, move it to SCAN_RESULT_DIR
           CYCLONEDX_SBOM=cyclonedx-sbom.json
-          if [ -f $CYCLONEDX_SBOM ]; then
-            mv $CYCLONEDX_SBOM $SCAN_RESULT_DIR
+          if [ -f $BUILD_DIR/$CYCLONEDX_SBOM ]; then
+            mv $BUILD_DIR/$CYCLONEDX_SBOM $SCAN_RESULT_DIR
           fi
       - name: Build Docker image
         if: ${{ inputs.docker_build_type == 'buildx' }}
