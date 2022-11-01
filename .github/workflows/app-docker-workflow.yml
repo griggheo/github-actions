@@ -175,7 +175,7 @@ jobs:
               FROM_IMAGE=$(grep 'ARG BASE_IMAGE' $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME | sed -r 's/ARG BASE_IMAGE=//g')
             fi
             echo FROM_IMAGE=$FROM_IMAGE
-            cosign verify --key env://$COSIGN_PUBLIC_KEY $FROM_IMAGE
+            cosign verify --key env://COSIGN_PUBLIC_KEY $FROM_IMAGE
           fi
       - name: Scan Dockerfile for vulnerabilities
         shell: bash
