@@ -1,4 +1,4 @@
-name: Docker Build Scan Push Workflow
+name: Build Workflow for Applications
 
 on:
   workflow_call:
@@ -36,7 +36,7 @@ on:
         required: true
 
 jobs:
-  build-app:
+  app-build:
     runs-on: ubuntu-latest
     container:
       image: ${{ inputs.docker_build_image }}
