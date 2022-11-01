@@ -195,12 +195,9 @@ jobs:
           BLOB_TAG=${{ steps.prep.outputs.BLOB_TAG }}
           # first verify blob signature with cosign
           cosign verify --key env://COSIGN_PUBLIC_KEY $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG
-          # export to tar.gz with crane
-          echo Running: crane export $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG $BUILD_DIR.tar.gz
-          crane export $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG $BUILD_DIR.tar.gz
-          ls -la $BUILD_DIR.tar.gz
-          tar xfz $BUILD_DIR.tar.gz
-          ls -la
+          # export to tar with crane
+          crane export $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG $BUILD_DIR.tar
+          tar xf $BUILD_DIR.tar
       - name: Build Docker image
         if: ${{ inputs.docker_build_type == 'buildx' }}
         shell: bash
