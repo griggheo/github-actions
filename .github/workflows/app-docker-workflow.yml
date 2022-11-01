@@ -142,6 +142,7 @@ jobs:
         id: prep
         shell: bash
         run: |
+          mkdir -p $SCAN_RESULT_DIR
           GITHUB_SHA=${{github.sha}}
           GITHUB_REF=${{github.ref}}
           VERSION=${GITHUB_SHA::8}
@@ -180,7 +181,6 @@ jobs:
       - name: Scan Dockerfile for vulnerabilities
         shell: bash
         run: |
-          mkdir -p $SCAN_RESULT_DIR
           if [ "$DOCKERFILE_SCANNER" == "semgrep" ]; then
             semgrep --config=auto $DOCKER_CONTEXT_DIR/$DOCKERFILE_NAME --json -o $SCAN_RESULT_DIR/semgrep-dockerfile.json
           fi
@@ -198,6 +198,11 @@ jobs:
           # export to tar with crane
           crane export $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG $BUILD_DIR.tar
           tar xf $BUILD_DIR.tar
+          # if cyclonedx SBOM is present, move it to SCAN_RESULT_DIR
+          CYCLONEDX_SBOM=cyclonedx-sbom.json
+          if [ -f $CYCLONEDX_SBOM ]; then
+            mv $CYCLONEDX_SBOM $SCAN_RESULT_DIR
+          fi
       - name: Build Docker image
         if: ${{ inputs.docker_build_type == 'buildx' }}
         shell: bash
@@ -211,7 +216,6 @@ jobs:
         shell: bash
         run: |
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
-          mkdir -p $SCAN_RESULT_DIR
           if [ "$DOCKER_IMAGE_SCANNER" == "trivy" ]; then
             ARGS="-f json -o $SCAN_RESULT_DIR/trivy-scan.json"
             if [ "$STOP_ON_CRITICAL_VULNS" == "true" ]; then
