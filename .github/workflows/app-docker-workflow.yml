@@ -37,6 +37,7 @@ on:
         description: 'Image to be used for the container running the jobs'
         required: false
         default: 'ghcr.io/codepraxis-io/ubuntu22.04:cicd'
+        type: string
       docker_context_dir:
         description: 'Docker context directory'
         required: false
