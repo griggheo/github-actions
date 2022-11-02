@@ -116,18 +116,18 @@ jobs:
       DESTINATION_REGISTRY: ${{ inputs.destination_registry }}
       DESTINATION_REGISTRY_USERNAME: ${{secrets.destination_registry_username}}
       DESTINATION_REGISTRY_PASSWORD: ${{secrets.destination_registry_password}}
-      DOCKER_CONTEXT_DIR: ${{ inputs.docker_context_dir }}
       DOCKERFILE_NAME: ${{ inputs.dockerfile_name }}
+      DOCKERFILE_SCANNER: ${{ inputs.dockerfile_scanner }}
+      DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
+      DOCKER_CONTEXT_DIR: ${{ inputs.docker_context_dir }}
       DOCKER_IMAGE_NAME: ${{ inputs.docker_image_name }}
       DOCKER_IMAGE_TAG: ${{ inputs.docker_image_tag }}
       DOCKER_IMAGE_TAG_SUFFIX: ${{ inputs.docker_image_tag_suffix }}
-      DOCKER_RUN_IMAGE: ${{ inputs.docker_run_image }}
-      DOCKER_BUILD_TYPE: ${{ inputs.docker_build_type }}
-      DOCKERFILE_SCANNER: ${{ inputs.dockerfile_scanner }}
       DOCKER_IMAGE_SCANNER: ${{ inputs.docker_image_scanner }}
-      SCAN_RESULT_DIR: "${{ inputs.scan_result_dir }}-${{ inputs.docker_image_tag_suffix }}"
-      STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}
       DOCKER_SBOM_GENERATOR: ${{ inputs.docker_sbom_generator }}
+      DOCKER_RUN_IMAGE: ${{ inputs.docker_run_image }}
+      SCAN_RESULT_DIR: "${{ inputs.scan_result_dir }}-${{ inputs.docker_image_tag_suffix }}"
+      STOP_ON_CRITICAL_VULNS: ${{ inputs.stop_on_critical_vulns }}      
       COSIGN_BLOB_NAME: ${{ inputs.cosign_blob_name }}
       COSIGN_PRIVATE_KEY: ${{secrets.cosign_private_key}}
       COSIGN_PUBLIC_KEY: ${{secrets.cosign_public_key}}
@@ -214,7 +214,12 @@ jobs:
           IMAGE_TAG=${{ steps.prep.outputs.IMAGE_TAG }}
           echo Building $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG with buildx
           pushd $DOCKER_CONTEXT_DIR
-              docker buildx build -t $DOCKER_IMAGE_NAME:$IMAGE_TAG . -f $DOCKERFILE_NAME
+            ARGS="-t $DOCKER_IMAGE_NAME:$IMAGE_TAG . -f $DOCKERFILE_NAME"
+            if [ "$DOCKER_RUN_IMAGE" != "" ]; then
+              ARGS="$ARGS --build-arg BASE_IMAGE=$DOCKER_RUN_IMAGE"
+            fi
+            echo Running: docker buildx build $ARGS
+            docker buildx build $ARGS
           popd
       - name: Scan Docker image
         shell: bash
