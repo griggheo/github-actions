@@ -65,9 +65,9 @@ jobs:
       COSIGN_PUBLIC_KEY: ${{secrets.cosign_public_key}}
       COSIGN_PASSWORD: ${{secrets.cosign_private_key_password}}
     steps:
-      - name: Mark workspace directory as safe
-        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
-        shell: bash
+      # - name: Mark workspace directory as safe
+      #   run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+      #   shell: bash
       - name: Code checkout
         uses: actions/checkout@v3
       - name: Prepare
