@@ -207,6 +207,7 @@ jobs:
           # export to tar with crane
           crane export $DESTINATION_REGISTRY/$COSIGN_BLOB_NAME-$BUILD_DIR:$BLOB_TAG $BUILD_DIR.tar
           tar xf $BUILD_DIR.tar
+          find . $BUILD_DIR -ls
           # if cyclonedx SBOM is present, move it to SCAN_RESULT_DIR
           CYCLONEDX_SBOM=cyclonedx-sbom.json
           if [ -f $BUILD_DIR/$CYCLONEDX_SBOM ]; then
